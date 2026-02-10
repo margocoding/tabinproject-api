@@ -1,12 +1,13 @@
-// routes/investmentRoutes.js - ПОЛНАЯ ВЕРСИЯ
+// routes/investmentRoutes.js - ПОЛНАЯ ВЕРСИЯ (независимо от среды)
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { uploadsPath } from '../config.js';
 
 const router = express.Router();
 
-// Настройка CORS middleware для маршрутов API
+// ===== НАСТРОЙКА CORS =====
 router.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -19,9 +20,11 @@ router.use((req, res, next) => {
     next();
 });
 
-// ===== НАСТРОЙКА MULTER ДЛЯ ИНВЕСТИЦИЙ =====
+// ===== ФИКСИРОВАННАЯ НАСТРОЙКА MULTER ДЛЯ ИНВЕСТИЦИЙ =====
 
-// Фильтр файлов (только изображения)
+// Жёстко заданная директория загрузки
+
+// Фильтр файлов — только изображения
 const fileFilter = (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
         cb(null, true);
@@ -30,40 +33,47 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Конфигурация хранилища для multer
+// Настройка хранилища multer
 const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-        // Используем ту же логику что и в bot.js
-        const isProduction = process.env.NODE_ENV === 'production';
-        const uploadDir = isProduction ? '/data/uploads' : path.join(process.cwd(), 'uploads');
-        
-        // Создаем директорию, если она не существует
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
+    destination: function (req, file, cb) {
+        // Создаём папку, если не существует
+        try {
+            if (!fs.existsSync(uploadsPath)) {
+                fs.mkdirSync(uploadsPath, { recursive: true });
+                console.log(`→ [multer] Директория создана: ${uploadsPath}`);
+            }
+            cb(null, uploadsPath);
+        } catch (err) {
+            console.error(`❌ [multer] Ошибка при создании директории ${uploadsPath}:`, err);
+            cb(err);
         }
-        
-        console.log(`📁 Investment upload destination: ${uploadDir} (production: ${isProduction})`);
-        cb(null, uploadDir);
     },
-    filename: function(req, file, cb) {
-        // Генерируем уникальное имя файла
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         const ext = path.extname(file.originalname);
-        const filename = 'investment-' + uniqueSuffix + ext;
+        const filename = `investment-${uniqueSuffix}${ext}`;
         
-        console.log(`💰 Generated investment filename: ${filename}`);
+        console.log(`→ [multer] Сгенерировано имя файла: ${filename}`);
         cb(null, filename);
+
+        // Опционально: проверка, что файл действительно записан (для отладки)
+        setTimeout(() => {
+            const filePath = path.join(uploadsPath, filename);
+            const exists = fs.existsSync(filePath);
+            console.log(`→ [multer] Файл существует по пути ${filePath}: ${exists}`);
+        }, 200);
     }
 });
 
-// Инициализация multer
+// Инициализация upload
 const upload = multer({
     storage,
     fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5 MB
+        fileSize: 5 * 1024 * 1024 // 5 МБ
     }
 });
+
 
 // Middleware для обработки ошибок загрузки файлов инвестиций
 const handleInvestmentUploadErrors = (req, res, next) => {

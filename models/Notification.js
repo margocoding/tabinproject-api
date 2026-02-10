@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const NotificationSchema = new mongoose.Schema({
     type: {
         type: String,
-        enum: ['all', 'level', 'income', 'test'],
+        enum: ['all', 'level', 'income', 'test', 'one'],
         required: true
     },
     message: {

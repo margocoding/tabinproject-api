@@ -8,10 +8,10 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const settings = await GameSettings.getDefaultSettings();
-        res.json({ success: true, data: settings });
+        res.json({success: true, data: settings});
     } catch (error) {
         console.error('Error getting game settings:', error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({success: false, error: error.message});
     }
 });
 
@@ -35,10 +35,10 @@ router.put('/', async (req, res) => {
         // Сохраняем настройки
         await settings.save();
 
-        res.json({ success: true, data: settings });
+        res.json({success: true, data: settings});
     } catch (error) {
         console.error('Error updating game settings:', error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({success: false, error: error.message});
     }
 });
 

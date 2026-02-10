@@ -34,6 +34,8 @@ router.get('/settings', async (req, res) => {
     }
 });
 
+
+
 // Get notifications history
 router.get('/admin/notifications', async (req, res) => {
     try {

@@ -8,7 +8,7 @@ const router = express.Router();
 // Отправка уведомления
 router.post('/send', async (req, res) => {
     try {
-        const { type, message, important, conditions, button } = req.body;
+        const {type, message, important, conditions, button} = req.body;
         console.log('Получен запрос на отправку уведомления:', req.body);
 
         // Поиск целевых пользователей
@@ -16,10 +16,14 @@ router.post('/send', async (req, res) => {
         // Для type='all' не добавляем условия в query
         if (type !== 'all') {
             if (type === 'level' && conditions?.minLevel) {
-                query['gameData.level.current'] = { $gte: conditions.minLevel };
+                query['gameData.level.current'] = {$gte: conditions.minLevel};
             }
             if (type === 'income' && conditions?.minIncome) {
-                query['gameData.passiveIncome'] = { $gte: conditions.minIncome };
+                query['gameData.passiveIncome'] = {$gte: conditions.minIncome};
+            }
+
+            if (type === 'one' && conditions?.id) {
+                query.telegramId = conditions?.id
             }
         }
 
@@ -94,7 +98,7 @@ router.post('/send', async (req, res) => {
             } catch (error) {
                 console.error(`Ошибка отправки для ${userId}:`, error);
                 failedCount++;
-                failures.push({ userId, error: error.message });
+                failures.push({userId, error: error.message});
             }
 
             // Добавляем паузу между отправками
@@ -131,7 +135,7 @@ router.post('/send', async (req, res) => {
 // Тестовая отправка уведомления
 router.post('/test', async (req, res) => {
     try {
-        const { message, important, button, testUserId } = req.body;
+        const {message, important, button, testUserId} = req.body;
 
         if (!testUserId) {
             return res.status(400).json({
@@ -217,7 +221,7 @@ router.post('/test', async (req, res) => {
 // Планирование уведомления (для будущего использования)
 router.post('/schedule', async (req, res) => {
     try {
-        const { type, message, important, conditions, button, scheduledFor } = req.body;
+        const {type, message, important, conditions, button, scheduledFor} = req.body;
 
         if (!scheduledFor) {
             return res.status(400).json({
@@ -253,8 +257,8 @@ router.post('/schedule', async (req, res) => {
 // Отметка уведомления как прочитанного
 router.post('/:id/read', async (req, res) => {
     try {
-        const { id } = req.params;
-        const { userId } = req.body;
+        const {id} = req.params;
+        const {userId} = req.body;
 
         if (!userId) {
             return res.status(400).json({

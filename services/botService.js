@@ -16,7 +16,7 @@ const token = process.env.TELEGRAM_BOT_TOKEN || '';
 const WEBAPP_URL = process.env.WEBAPP_URL || '';
 const API_URL = process.env.API_URL || '';
 const APP_URL = process.env.APP_URL || '';
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 if (!token) {
     console.error('TELEGRAM_BOT_TOKEN is not defined');

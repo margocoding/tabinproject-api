@@ -1,32 +1,16 @@
 // bot.js
 import dotenv from 'dotenv';
+dotenv.config();
 import path from 'path';
 import { fileURLToPath } from 'url';
-import TelegramBot from 'node-telegram-bot-api';
-import express from 'express';
-import { WebSocketServer } from 'ws';
-import { createServer } from 'http';
-import dbConnect from './lib/dbConnect.js';
-import cors from 'cors';
-import config from './config.js';
-import referralRoutes from './routes/referralRoutes.js';
-import productRoutes from './routes/productRoutes.js';
-import investmentRoutes from './routes/investmentRoutes.js';
-
 import fs from 'fs';
-
-// Импорт моделей
-import User from './models/User.js';
-import Product from './models/Product.js';
-import ProductClaim from './models/ProductClaim.js';
-import Notification from './models/Notification.js';
-import Referral from './models/Referral.js';
-
-// Импорт маршрутов
-import adminRoutes from './routes/adminRoutes.js';
-import userRoutes from './routes/userRoutes.js';
-import settingsRoutes from './routes/settingsRoutes.js';
-import notificationRoutes from './routes/notificationRoutes.js';
+import express from 'express';
+import cors from 'cors';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import TelegramBot from 'node-telegram-bot-api';
+import dbConnect from './lib/dbConnect.js';
+import config, { isProduction, uploadsPath } from './config.js';
 
 // Настройка __dirname для ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -40,11 +24,62 @@ const wss = new WebSocketServer({ server });
 // Хранилище WebSocket клиентов
 const clients = new Map();
 
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Импорт моделей
+import User from './models/User.js';
+import Product from './models/Product.js';
+import ProductClaim from './models/ProductClaim.js';
+import Notification from './models/Notification.js';
+import Referral from './models/Referral.js';
+
+// Импорт маршрутов
+import referralRoutes from './routes/referralRoutes.js';
+import productRoutes from './routes/productRoutes.js';
+import investmentRoutes from './routes/investmentRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+
+// ✅ Уникальные имена для новых маршрутов
+import taskUserRoutes from './routes/tasks/user.js';
+import taskCompleteRoutes from './routes/tasks/complete.js';
+import { startPassiveIncomeCron } from './jobs/passiveIncomeJob.js';
+
+// Подключение маршрутов
+// app.use('/api/referrals', referralRoutes);
+// app.use('/api/products', productRoutes);
+// app.use('/api/investments', investmentRoutes);
+// app.use('/api/admin', adminRoutes);
+// app.use('/api/users', userRoutes);
+// app.use('/api/settings', settingsRoutes);
+// app.use('/api/notifications', notificationRoutes);
+
+// // ✅ Новые маршруты задач
+// app.use('/api/tasks/user', taskUserRoutes);
+// app.use('/api/tasks/complete', taskCompleteRoutes);
+
+
+const isCronLeader = (typeof process.env.NODE_APP_INSTANCE !== 'undefined')
+  ? process.env.NODE_APP_INSTANCE === '0'
+  : true; // если нет pm2 — запускаем
+
+if (process.env.PASSIVE_INCOME_CRON && process.env.PASSIVE_INCOME_CRON !== 'false') {
+  // если явно включено через env
+  startPassiveIncomeCron();
+  console.log('passiveIncomeCron started via PASSIVE_INCOME_CRON env');
+} else if (isCronLeader) {
+  startPassiveIncomeCron();
+  console.log('passiveIncomeCron started in leader instance (NODE_APP_INSTANCE=0)');
+} else {
+  console.log('passiveIncomeCron skipped in this instance (NODE_APP_INSTANCE=' + process.env.NODE_APP_INSTANCE + ')');
+}
+
 // ===== ИСПРАВЛЕННАЯ НАСТРОЙКА UPLOADS =====
 
-// Настраиваем директорию для загрузок
-const isProduction = process.env.NODE_ENV === 'production';
-const uploadsPath = isProduction ? '/data/uploads' : path.join(__dirname, 'uploads');
 
 // Настраиваем статическую раздачу файлов из директории uploads
 app.use('/uploads', express.static(uploadsPath));
@@ -123,6 +158,9 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+
+
 // ===== ТЕСТОВЫЙ ENDPOINT ДЛЯ UPLOADS =====
 
 // Тестовый endpoint для проверки загрузок
@@ -185,6 +223,8 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin/investments', investmentRoutes);
 app.use('/api/investments', investmentRoutes);
+app.use('/api/tasks/user', taskUserRoutes);
+app.use('/api/tasks/complete', taskCompleteRoutes);
 
 // Обработка WebSocket подключений
 wss.on('connection', (ws, req) => {
@@ -446,5 +486,7 @@ startServer().catch(error => {
     console.error('Ошибка при запуске:', error);
     process.exit(1);
 });
+
+
 
 export default server;
