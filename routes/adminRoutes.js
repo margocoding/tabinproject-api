@@ -14,19 +14,6 @@ import config, {uploadsPath} from "../config.js";
 
 const router = express.Router();
 
-// Настройка CORS middleware для маршрутов API
-router.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization",);
-
-    if (req.method === "OPTIONS") {
-        return res.status(200).end();
-    }
-
-    next();
-});
-
 // ===== ФИКСИРОВАННАЯ НАСТРОЙКА MULTER (НЕ ЗАВИСИТ ОТ СРЕДЫ) =====
 
 // Жёстко заданная папка загрузки
@@ -498,6 +485,8 @@ router.post('/users/:id/regenerate-energy', async (req, res) => {
             });
         }
 
+        if (user.gameData.energy.current >= user.gameData.energy.max) return res.status(400).json({error: 'Невозможно восстановить энергию. Достигнут максимум'})
+
         const updatedUser = await User.findOneAndUpdate(
             {telegramId: id},
             {
@@ -590,7 +579,7 @@ router.post("/users/actions", async (req, res) => {
                         .status(400)
                         .json({success: false, message: "Некорректный amount"});
                 }
-                user.passiveIncome = amount;
+                user.gameData.passiveIncome = amount;
                 await user.save();
                 break;
 
