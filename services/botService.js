@@ -3,11 +3,11 @@ import dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
 import fetch from 'node-fetch';
 import express from 'express';
-import { WebSocketServer } from 'ws';
-import { createServer } from 'http';
+import {WebSocketServer} from 'ws';
+import {createServer} from 'http';
 import dbConnect from '../lib/dbConnect.js';
-import Referral from '../models/Referral.js';
 import cors from 'cors';
+import config from "../config.js";
 
 dotenv.config();
 
@@ -26,15 +26,15 @@ if (!token) {
 // Инициализация Express и WebSocket
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({server});
 
 app.use(cors({
-    origin: process.env.WEBAPP_URL,
+    origin: config.NODE_ENV === 'development' ? true : process.env.WEBAPP_URL,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({extended: true}));
 
 // Добавьте middleware для обработки ошибок
 app.use((err, req, res, next) => {
@@ -125,7 +125,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
 // API для отправки уведомлений
 app.post('/api/notifications/send', async (req, res) => {
     try {
-        const { userIds, notification } = req.body;
+        const {userIds, notification} = req.body;
         const results = {
             success: 0,
             failed: 0,
@@ -139,20 +139,20 @@ app.post('/api/notifications/send', async (req, res) => {
                     results.success++;
                 } else {
                     results.failed++;
-                    results.failures.push({ userId, error: 'Failed to send notification' });
+                    results.failures.push({userId, error: 'Failed to send notification'});
                 }
                 // Небольшая задержка между отправками
                 await new Promise(resolve => setTimeout(resolve, 50));
             } catch (error) {
                 results.failed++;
-                results.failures.push({ userId, error: error.message });
+                results.failures.push({userId, error: error.message});
             }
         }
 
-        res.json({ success: true, data: results });
+        res.json({success: true, data: results});
     } catch (error) {
         console.error('Error sending notifications:', error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({success: false, error: error.message});
     }
 });
 

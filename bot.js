@@ -1,38 +1,16 @@
 // bot.js
 import dotenv from 'dotenv';
-dotenv.config();
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 import fs from 'fs';
 import express from 'express';
-import cors from 'cors';
-import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
+import {createServer} from 'http';
+import {WebSocketServer} from 'ws';
 import TelegramBot from 'node-telegram-bot-api';
 import dbConnect from './lib/dbConnect.js';
-import config, { isProduction, uploadsPath } from './config.js';
-
-// Настройка __dirname для ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Инициализация Express и WebSocket
-const app = express();
-const server = createServer(app);
-const wss = new WebSocketServer({ server });
-
-// Хранилище WebSocket клиентов
-const clients = new Map();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
+import config, {isProduction, uploadsPath} from './config.js';
 // Импорт моделей
 import User from './models/User.js';
-import Product from './models/Product.js';
-import ProductClaim from './models/ProductClaim.js';
-import Notification from './models/Notification.js';
 import Referral from './models/Referral.js';
 
 // Импорт маршрутов
@@ -47,7 +25,26 @@ import notificationRoutes from './routes/notificationRoutes.js';
 // ✅ Уникальные имена для новых маршрутов
 import taskUserRoutes from './routes/tasks/user.js';
 import taskCompleteRoutes from './routes/tasks/complete.js';
-import { startPassiveIncomeCron } from './jobs/passiveIncomeJob.js';
+import {startPassiveIncomeCron} from './jobs/passiveIncomeJob.js';
+import cors from "cors";
+
+dotenv.config();
+
+// Настройка __dirname для ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Инициализация Express и WebSocket
+const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({server});
+
+// Хранилище WebSocket клиентов
+const clients = new Map();
+
+// Middleware
+app.use(cors({origin: true}));
+app.use(express.json());
 
 // Подключение маршрутов
 // app.use('/api/referrals', referralRoutes);
@@ -64,18 +61,18 @@ import { startPassiveIncomeCron } from './jobs/passiveIncomeJob.js';
 
 
 const isCronLeader = (typeof process.env.NODE_APP_INSTANCE !== 'undefined')
-  ? process.env.NODE_APP_INSTANCE === '0'
-  : true; // если нет pm2 — запускаем
+    ? process.env.NODE_APP_INSTANCE === '0'
+    : true; // если нет pm2 — запускаем
 
 if (process.env.PASSIVE_INCOME_CRON && process.env.PASSIVE_INCOME_CRON !== 'false') {
-  // если явно включено через env
-  startPassiveIncomeCron();
-  console.log('passiveIncomeCron started via PASSIVE_INCOME_CRON env');
+    // если явно включено через env
+    startPassiveIncomeCron();
+    console.log('passiveIncomeCron started via PASSIVE_INCOME_CRON env');
 } else if (isCronLeader) {
-  startPassiveIncomeCron();
-  console.log('passiveIncomeCron started in leader instance (NODE_APP_INSTANCE=0)');
+    startPassiveIncomeCron();
+    console.log('passiveIncomeCron started in leader instance (NODE_APP_INSTANCE=0)');
 } else {
-  console.log('passiveIncomeCron skipped in this instance (NODE_APP_INSTANCE=' + process.env.NODE_APP_INSTANCE + ')');
+    console.log('passiveIncomeCron skipped in this instance (NODE_APP_INSTANCE=' + process.env.NODE_APP_INSTANCE + ')');
 }
 
 // ===== ИСПРАВЛЕННАЯ НАСТРОЙКА UPLOADS =====
@@ -87,7 +84,7 @@ console.log(`📁 Serving static files from: ${uploadsPath} via /uploads/ route`
 
 // Если директория не существует, создаем её
 if (!fs.existsSync(uploadsPath)) {
-    fs.mkdirSync(uploadsPath, { recursive: true });
+    fs.mkdirSync(uploadsPath, {recursive: true});
     console.log(`✅ Created uploads directory: ${uploadsPath}`);
 }
 
@@ -96,7 +93,7 @@ const subdirs = ['products', 'investments', 'tasks'];
 subdirs.forEach(subdir => {
     const fullPath = path.join(uploadsPath, subdir);
     if (!fs.existsSync(fullPath)) {
-        fs.mkdirSync(fullPath, { recursive: true });
+        fs.mkdirSync(fullPath, {recursive: true});
         console.log(`✅ Created subdirectory: ${fullPath}`);
     }
 });
@@ -118,23 +115,6 @@ if (fs.existsSync(uploadsPath)) {
 }
 console.log('==============================\n');
 
-// ВАЖНО: Удаляем прежние CORS-настройки и используем только один подход
-// для предотвращения конфликтов между разными middleware
-
-// Полностью отключаем CORS-ограничения для тестирования
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
-
-    // Обработка preflight запросов OPTIONS
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    next();
-});
-
 // Логирование запросов
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -146,7 +126,7 @@ app.use((req, res, next) => {
     const originalJson = res.json;
 
     // Переопределяем метод res.json для логирования ответов
-    res.json = function(data) {
+    res.json = function (data) {
         console.log(`Response for ${req.method} ${req.url}:`, JSON.stringify(data, null, 2));
         originalJson.call(this, data);
     };
@@ -156,9 +136,7 @@ app.use((req, res, next) => {
 
 // Парсинг JSON.
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-
+app.use(express.urlencoded({extended: true}));
 
 
 // ===== ТЕСТОВЫЙ ENDPOINT ДЛЯ UPLOADS =====
@@ -167,7 +145,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/test-uploads', (req, res) => {
     try {
         const files = fs.readdirSync(uploadsPath).slice(0, 20);
-        
+
         res.json({
             success: true,
             uploadsPath: uploadsPath,
@@ -178,9 +156,9 @@ app.get('/test-uploads', (req, res) => {
             sampleFileUrl: files.length > 0 ? `${req.protocol}://${req.get('host')}/uploads/${files[0]}` : null
         });
     } catch (error) {
-        res.status(500).json({ 
-            success: false, 
-            error: error.message, 
+        res.status(500).json({
+            success: false,
+            error: error.message,
             uploadsPath: uploadsPath,
             exists: fs.existsSync(uploadsPath)
         });
@@ -191,9 +169,9 @@ app.get('/test-uploads', (req, res) => {
 app.get('/uploads/*', (req, res, next) => {
     const filePath = req.path.replace('/uploads/', '');
     const fullPath = path.join(uploadsPath, filePath);
-    
+
     console.log(`📁 Запрос файла: ${req.path} → ${fullPath}`);
-    
+
     if (fs.existsSync(fullPath)) {
         console.log(`✅ Файл найден, отправляем: ${fullPath}`);
         res.sendFile(fullPath);
@@ -205,7 +183,7 @@ app.get('/uploads/*', (req, res, next) => {
 });
 
 // Инициализация бота
-const bot = new TelegramBot(config.TELEGRAM_BOT_TOKEN, { webHook: true });
+const bot = new TelegramBot(config.TELEGRAM_BOT_TOKEN, {webHook: true});
 
 // Добавление бота и клиентов в объект запроса
 app.use((req, res, next) => {
@@ -279,7 +257,7 @@ bot.on('text', async (msg) => {
         console.log(`Получено текстовое сообщение от пользователя ${userId}: ${msg.text}`);
 
         // Проверяем, существует ли пользователь в базе данных
-        const user = await User.findOne({ telegramId: userId.toString() });
+        const user = await User.findOne({telegramId: userId.toString()});
 
         // Если пользователя нет в базе, отправляем приветственное сообщение
         if (!user) {
@@ -313,7 +291,7 @@ bot.onText(/\/start(.*)/, async (msg, match) => {
 
         // Создание или обновление пользователя
         const userData = await User.findOneAndUpdate(
-            { telegramId: userId.toString() },
+            {telegramId: userId.toString()},
             {
                 $setOnInsert: {
                     first_name: msg.from.first_name,
@@ -343,7 +321,7 @@ bot.onText(/\/start(.*)/, async (msg, match) => {
                     lastLogin: new Date()
                 }
             },
-            { upsert: true, new: true }
+            {upsert: true, new: true}
         );
 
         console.log('Пользователь сохранен/обновлен:', userData);
@@ -486,7 +464,6 @@ startServer().catch(error => {
     console.error('Ошибка при запуске:', error);
     process.exit(1);
 });
-
 
 
 export default server;
