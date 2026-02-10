@@ -17,10 +17,10 @@
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "^0.64.0",
-    "ws": "^8.16.0"
+    "ws": "^8.16.0",
+    "cross-env": "^10.1.0"
   },
   "devDependencies": {
-    "cross-env": "^10.1.0",
     "nodemon": "^3.1.11"
   }
 }
