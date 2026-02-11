@@ -3,7 +3,9 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { uploadsPath } from '../config.js';
+import {uploadsPath} from '../config.js';
+import User from "../models/User.js";
+import Investment from "../models/Investment.js";
 
 const router = express.Router();
 
@@ -39,7 +41,7 @@ const storage = multer.diskStorage({
         // Создаём папку, если не существует
         try {
             if (!fs.existsSync(uploadsPath)) {
-                fs.mkdirSync(uploadsPath, { recursive: true });
+                fs.mkdirSync(uploadsPath, {recursive: true});
                 console.log(`→ [multer] Директория создана: ${uploadsPath}`);
             }
             cb(null, uploadsPath);
@@ -47,12 +49,11 @@ const storage = multer.diskStorage({
             console.error(`❌ [multer] Ошибка при создании директории ${uploadsPath}:`, err);
             cb(err);
         }
-    },
-    filename: function (req, file, cb) {
+    }, filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         const ext = path.extname(file.originalname);
         const filename = `investment-${uniqueSuffix}${ext}`;
-        
+
         console.log(`→ [multer] Сгенерировано имя файла: ${filename}`);
         cb(null, filename);
 
@@ -67,9 +68,7 @@ const storage = multer.diskStorage({
 
 // Инициализация upload
 const upload = multer({
-    storage,
-    fileFilter,
-    limits: {
+    storage, fileFilter, limits: {
         fileSize: 5 * 1024 * 1024 // 5 МБ
     }
 });
@@ -82,13 +81,11 @@ const handleInvestmentUploadErrors = (req, res, next) => {
             console.error('Investment file upload error:', err);
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).json({
-                    success: false,
-                    error: 'Размер файла превышает допустимый лимит (5MB)'
+                    success: false, error: 'Размер файла превышает допустимый лимит (5MB)'
                 });
             }
             return res.status(400).json({
-                success: false,
-                error: err.message
+                success: false, error: err.message
             });
         }
         next();
@@ -102,14 +99,14 @@ router.get('/', async (req, res) => {
     try {
         // Динамический импорт модели
         const Investment = (await import('../models/Investment.js')).default;
-        
-        const investments = await Investment.find({}).sort({ order: 1, category: 1 });
-        
+
+        const investments = await Investment.find({}).sort({order: 1, category: 1});
+
         console.log(`📊 Found ${investments.length} investments`);
-        res.json({ success: true, data: investments });
+        res.json({success: true, data: investments});
     } catch (error) {
         console.error('❌ Error getting investments:', error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({success: false, error: error.message});
     }
 });
 
@@ -124,7 +121,7 @@ router.post('/upload', handleInvestmentUploadErrors, async (req, res) => {
         const Investment = (await import('../models/Investment.js')).default;
 
         // Находим максимальный order и увеличиваем на 1
-        const lastInvestment = await Investment.findOne({}).sort({ order: -1 });
+        const lastInvestment = await Investment.findOne({}).sort({order: -1});
         const order = lastInvestment ? lastInvestment.order + 1 : 0;
 
         const investmentData = {
@@ -161,23 +158,23 @@ router.post('/upload', handleInvestmentUploadErrors, async (req, res) => {
         const investment = await Investment.create(investmentData);
         console.log('✅ Investment created successfully:', investment._id);
 
-        res.status(201).json({ success: true, data: investment });
+        res.status(201).json({success: true, data: investment});
     } catch (error) {
         console.error('❌ Error creating investment with image:', error);
-        res.status(400).json({ success: false, error: error.message });
+        res.status(400).json({success: false, error: error.message});
     }
 });
 
 // Обновление инвестиции с изображением
 router.put('/:id/upload', handleInvestmentUploadErrors, async (req, res) => {
     try {
-        const { id } = req.params;
+        const {id} = req.params;
         console.log(`💰 Updating investment ${id} with image...`);
-        
+
         // Динамический импорт модели
         const Investment = (await import('../models/Investment.js')).default;
-        
-        const investmentData = { ...req.body };
+
+        const investmentData = {...req.body};
 
         // Преобразуем значения
         investmentData.baseIncome = Number(investmentData.baseIncome) || 0;
@@ -190,7 +187,7 @@ router.put('/:id/upload', handleInvestmentUploadErrors, async (req, res) => {
         // Находим существующую инвестицию
         const existingInvestment = await Investment.findById(id);
         if (!existingInvestment) {
-            return res.status(404).json({ success: false, message: 'Инвестиция не найдена' });
+            return res.status(404).json({success: false, message: 'Инвестиция не найдена'});
         }
 
         // Если загружено новое изображение
@@ -213,13 +210,13 @@ router.put('/:id/upload', handleInvestmentUploadErrors, async (req, res) => {
         }
 
         // Обновляем инвестицию
-        const investment = await Investment.findByIdAndUpdate(id, investmentData, { new: true });
+        const investment = await Investment.findByIdAndUpdate(id, investmentData, {new: true});
         console.log('✅ Investment updated successfully:', investment._id);
 
-        res.json({ success: true, data: investment });
+        res.json({success: true, data: investment});
     } catch (error) {
         console.error('❌ Error updating investment with image:', error);
-        res.status(400).json({ success: false, error: error.message });
+        res.status(400).json({success: false, error: error.message});
     }
 });
 
@@ -227,22 +224,21 @@ router.put('/:id/upload', handleInvestmentUploadErrors, async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         console.log('💰 Creating investment without image...');
-        
+
         const Investment = (await import('../models/Investment.js')).default;
-        
-        const lastInvestment = await Investment.findOne({}).sort({ order: -1 });
+
+        const lastInvestment = await Investment.findOne({}).sort({order: -1});
         const order = lastInvestment ? lastInvestment.order + 1 : 0;
 
         const investment = await Investment.create({
-            ...req.body,
-            order
+            ...req.body, order
         });
 
         console.log('✅ Investment created successfully:', investment._id);
-        res.status(201).json({ success: true, data: investment });
+        res.status(201).json({success: true, data: investment});
     } catch (error) {
         console.error('❌ Error creating investment:', error);
-        res.status(400).json({ success: false, error: error.message });
+        res.status(400).json({success: false, error: error.message});
     }
 });
 
@@ -250,17 +246,17 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const Investment = (await import('../models/Investment.js')).default;
-        const { id } = req.params;
+        const {id} = req.params;
         const investment = await Investment.findById(id);
 
         if (!investment) {
-            return res.status(404).json({ success: false, message: 'Инвестиция не найдена' });
+            return res.status(404).json({success: false, message: 'Инвестиция не найдена'});
         }
 
-        res.json({ success: true, data: investment });
+        res.json({success: true, data: investment});
     } catch (error) {
         console.error('❌ Error getting investment:', error);
-        res.status(400).json({ success: false, error: error.message });
+        res.status(400).json({success: false, error: error.message});
     }
 });
 
@@ -268,20 +264,20 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         console.log(`💰 Updating investment ${req.params.id} without image...`);
-        
+
         const Investment = (await import('../models/Investment.js')).default;
-        const { id } = req.params;
-        const investment = await Investment.findByIdAndUpdate(id, req.body, { new: true });
+        const {id} = req.params;
+        const investment = await Investment.findByIdAndUpdate(id, req.body, {new: true});
 
         if (!investment) {
-            return res.status(404).json({ success: false, message: 'Инвестиция не найдена' });
+            return res.status(404).json({success: false, message: 'Инвестиция не найдена'});
         }
 
         console.log('✅ Investment updated successfully:', investment._id);
-        res.json({ success: true, data: investment });
+        res.json({success: true, data: investment});
     } catch (error) {
         console.error('❌ Error updating investment:', error);
-        res.status(400).json({ success: false, error: error.message });
+        res.status(400).json({success: false, error: error.message});
     }
 });
 
@@ -289,13 +285,13 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         console.log(`💰 Deleting investment ${req.params.id}...`);
-        
+
         const Investment = (await import('../models/Investment.js')).default;
-        const { id } = req.params;
-        
+        const {id} = req.params;
+
         const investment = await Investment.findById(id);
         if (!investment) {
-            return res.status(404).json({ success: false, message: 'Инвестиция не найдена' });
+            return res.status(404).json({success: false, message: 'Инвестиция не найдена'});
         }
 
         // Удаляем изображение если есть
@@ -313,10 +309,10 @@ router.delete('/:id', async (req, res) => {
 
         await Investment.findByIdAndDelete(id);
         console.log('✅ Investment deleted successfully:', id);
-        res.json({ success: true, data: {} });
+        res.json({success: true, data: {}});
     } catch (error) {
         console.error('❌ Error deleting investment:', error);
-        res.status(400).json({ success: false, error: error.message });
+        res.status(400).json({success: false, error: error.message});
     }
 });
 
@@ -324,40 +320,232 @@ router.delete('/:id', async (req, res) => {
 router.post('/reorder', async (req, res) => {
     try {
         console.log('💰 Reordering investments...');
-        
+
         const Investment = (await import('../models/Investment.js')).default;
-        const { orderedIds } = req.body;
+        const {orderedIds} = req.body;
 
         for (let i = 0; i < orderedIds.length; i++) {
-            await Investment.findByIdAndUpdate(orderedIds[i], { order: i });
+            await Investment.findByIdAndUpdate(orderedIds[i], {order: i});
         }
 
-        const investments = await Investment.find({}).sort({ order: 1 });
+        const investments = await Investment.find({}).sort({order: 1});
         console.log('✅ Investments reordered successfully');
-        res.json({ success: true, data: investments });
+        res.json({success: true, data: investments});
     } catch (error) {
         console.error('❌ Error reordering investments:', error);
-        res.status(400).json({ success: false, error: error.message });
+        res.status(400).json({success: false, error: error.message});
     }
 });
+
+const migrate = async () => {
+    const users = await User.find()
+
+    for (const user of users) {
+        const purchased = user.gameData.investments.purchased || []
+
+        user.gameData.investments.purchased = purchased
+            .filter(item => item.id) // удаляем мусор
+            .map(item => ({
+                id: item.id,
+                level: item.level || 1,
+                income: item.income || 0,
+                purchaseDate: item.purchaseDate || new Date(),
+                type: item.type || 'business'
+            }))
+
+        await user.save()
+    }
+}
+
+migrate();
 
 // Получение инвестиций по категории
-router.get('/category/:category', async (req, res) => {
+router.get('/category/:category/:telegramId', async (req, res) => {
     try {
-        const Investment = (await import('../models/Investment.js')).default;
-        const { category } = req.params;
-        
-        const investments = await Investment.find({ 
-            category, 
-            active: true 
-        }).sort({ order: 1 });
+        const {category, telegramId} = req.params
 
-        console.log(`📊 Found ${investments.length} investments in category: ${category}`);
-        res.json({ success: true, data: investments });
+
+        const user = await User.findOne({telegramId})
+        if (!user) {
+            return res.status(404).json({message: 'User not found'})
+        }
+
+        const investments = await Investment.find({
+            category, active: true
+        }).sort({order: 1})
+
+        const purchased = user.gameData.investments.purchased || []
+        const userLevel = user.gameData.level.current || 1
+
+        const enriched = investments.map(inv => {
+            const existing = purchased.find(item => item.id === inv._id.toString())
+
+            const level = existing ? existing.level : 0
+            const income = existing ? existing.income : 0
+
+            const nextLevel = level + 1
+
+            const nextCost = calculateCost(inv, nextLevel)
+            const nextIncome = calculateIncome(inv, nextLevel, userLevel)
+
+            return {
+                ...inv.toObject(), userLevel: level, currentIncome: income, nextCost, nextIncome
+            }
+        })
+
+        res.json({success: true, data: enriched})
+
     } catch (error) {
-        console.error('❌ Error getting investments by category:', error);
-        res.status(500).json({ success: false, error: error.message });
+        console.error(error)
+        res.status(500).json({message: 'Server error'})
     }
-});
+})
+
+const findPurchasedInvestment = (userInvestments, category, id) => {
+    if (!userInvestments || !Array.isArray(userInvestments.purchased)) {
+        return null
+    }
+
+    return userInvestments.purchased.find(item => item.type === category && item._id === id)
+}
+
+
+const getInvestmentLevel = (userInvestments, id) => {
+    const purchased = findPurchasedInvestment(userInvestments, userInvestments.category, id)
+
+    if (purchased) {
+        return purchased.level
+    }
+
+    // Иначе возвращаем начальный уровень
+    return 1
+}
+
+
+const calculateIncome = (investment, level, userLevel) => {
+    const baseIncome = investment.baseIncome
+    const type = investment.type || 'linear'
+
+    switch (type) {
+        case 'linear':
+            return baseIncome * Math.pow(investment.multiplier, level)
+
+        case 'parabolic':
+            return (
+                baseIncome * Math.pow(investment.multiplier, level) +
+                baseIncome * (investment.bonus_percent || 0) * userLevel
+            )
+
+        case 'exponential':
+            return baseIncome *
+                Math.pow(investment.multiplier, level * userLevel)
+
+        case 'inverse_parabolic':
+            const decay = 1 / (1 + (userLevel / 10))
+            return baseIncome *
+                Math.pow(investment.multiplier, level) *
+                decay
+
+        default:
+            return baseIncome
+    }
+}
+
+
+const calculateCost = (investment, level) => {
+    // Базовая стоимость
+    const baseCost = investment.cost || 0
+    // Коэффициент роста цены
+    const costMultiplier = investment.multiplier || 1.5
+
+    // Рассчитываем стоимость: базовая стоимость * (множитель ^ (уровень - базовый уровень))
+    const baseLevel = investment.level || 1
+    const levelDifference = level - baseLevel
+
+    if (levelDifference <= 0) {
+        return baseCost
+    }
+
+    return Math.round(baseCost * Math.pow(costMultiplier, levelDifference))
+}
+
+router.post('/buy/:userId/:productId', async (req, res) => {
+    try {
+        const {userId, productId} = req.params
+
+        const user = await User.findOne({telegramId: userId})
+        if (!user) {
+            return res.status(404).json({message: 'User not found'})
+        }
+
+        const investment = await Investment.findById(productId)
+        if (!investment || !investment.active) {
+            return res.status(404).json({message: 'Investment not found'})
+        }
+
+        if (!user.gameData.investments.purchased) {
+            user.gameData.investments.purchased = []
+        }
+
+        const existing = user.gameData.investments.purchased
+            .find(item => item.id === investment._id.toString())
+
+        const currentLevel = existing ? existing.level : 0
+        const newLevel = currentLevel + 1
+
+        const cost = calculateCost(investment, newLevel)
+
+        if (user.gameData.balance < cost) {
+            return res.status(400).json({message: 'Not enough balance'})
+        }
+
+        // считаем income ЧИСТО от нового уровня
+        const income = calculateIncome(
+            investment,
+            newLevel,
+            user.gameData.level.current
+        )
+
+        const previousIncome = existing ? existing.income : 0
+
+        user.gameData.balance -= cost
+
+        // корректная разница
+        user.gameData.passiveIncome += (income - previousIncome)
+
+        if (user.gameData.passiveIncome > user.gameData.stats.maxPassiveIncome) {
+            user.gameData.stats.maxPassiveIncome = user.gameData.passiveIncome
+        }
+
+        if (existing) {
+            existing.level = newLevel
+            existing.income = income
+            existing.purchaseDate = new Date()
+        } else {
+            user.gameData.investments.purchased.push({
+                id: investment._id.toString(),
+                level: newLevel,
+                income,
+                purchaseDate: new Date(),
+                type: investment.category
+            })
+        }
+
+        await user.save()
+
+        return res.json({
+            success: true,
+            balance: user.gameData.balance,
+            passiveIncome: user.gameData.passiveIncome,
+            newLevel,
+            income,
+            nextCost: calculateCost(investment, newLevel + 1)
+        })
+
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({message: 'Server error'})
+    }
+})
 
 export default router;

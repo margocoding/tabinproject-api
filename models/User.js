@@ -1,6 +1,31 @@
 // models/User.js
 import mongoose from "mongoose";
 
+const PurchasedInvestmentSchema = new mongoose.Schema({
+    id: {
+        type: String,
+        required: true
+    },
+    level: {
+        type: Number,
+        required: true,
+        default: 1
+    },
+    income: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    purchaseDate: {
+        type: Date,
+        default: Date.now
+    },
+    type: {
+        type: String,
+        required: true
+    }
+}, {_id: false})
+
 const UserSchema = new mongoose.Schema(
     {
         // Основная информация из Telegram
@@ -64,15 +89,10 @@ const UserSchema = new mongoose.Schema(
                 incomeBoost: {type: Number, default: 1},
             },
             investments: {
-                purchased: [
-                    {
-                        id: String,
-                        level: Number,
-                        income: Number,
-                        purchaseDate: Date,
-                        type: String,
-                    },
-                ],
+                purchased: {
+                    type: [PurchasedInvestmentSchema],
+                    default: []
+                },
                 activeIncome: {type: Number, default: 0},
                 lastCalculation: {type: Date, default: Date.now},
             },
