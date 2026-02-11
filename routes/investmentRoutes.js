@@ -337,28 +337,6 @@ router.post('/reorder', async (req, res) => {
     }
 });
 
-const migrate = async () => {
-    const users = await User.find()
-
-    for (const user of users) {
-        const purchased = user.gameData.investments.purchased || []
-
-        user.gameData.investments.purchased = purchased
-            .filter(item => item.id) // удаляем мусор
-            .map(item => ({
-                id: item.id,
-                level: item.level || 1,
-                income: item.income || 0,
-                purchaseDate: item.purchaseDate || new Date(),
-                type: item.type || 'business'
-            }))
-
-        await user.save()
-    }
-}
-
-migrate();
-
 // Получение инвестиций по категории
 router.get('/category/:category/:telegramId', async (req, res) => {
     try {
