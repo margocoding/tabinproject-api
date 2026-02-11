@@ -43,7 +43,7 @@ const wss = new WebSocketServer({server});
 const clients = new Map();
 
 // Middleware
-app.use(cors({origin: true}));
+app.use(cors({origin: config.NODE_ENV === 'development' ? true : config.WEBAPP_URL}));
 app.use(express.json());
 
 // Подключение маршрутов
